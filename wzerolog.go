@@ -11,10 +11,18 @@ import (
 
 type Config struct {
 	// LogLevel: 0 debug, 1 info, 2 warn, 3 error
-	LogLevel     int8   `yaml:"log_level" mapstructure:"log_level"`
-	PrettyOutput bool   `yaml:"pretty_output" mapstructure:"pretty_output"`
-	AppID        string `yaml:"app_id" mapstructure:"app_id"`
-	Env          string `yaml:"env" mapstructure:"env"`
+	LogLevel     zerolog.Level `yaml:"log_level" mapstructure:"log_level"`
+	PrettyOutput bool          `yaml:"pretty_output" mapstructure:"pretty_output"`
+	AppID        string        `yaml:"app_id" mapstructure:"app_id"`
+	Env          string        `yaml:"env" mapstructure:"env"`
+}
+
+type NoMsgHook struct{}
+
+func (h NoMsgHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	if msg == "" {
+		e.Str("message", "no message")
+	}
 }
 
 func Init(cfg Config) {
@@ -23,7 +31,7 @@ func Init(cfg Config) {
 	zerolog.DisableSampling(true)
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
 
-	zerolog.SetGlobalLevel(zerolog.Level(cfg.LogLevel))
+	zerolog.SetGlobalLevel(cfg.LogLevel)
 
 	var outWriter io.Writer
 	outWriter = os.Stdout
@@ -38,6 +46,6 @@ func Init(cfg Config) {
 		Caller().
 		Str("app_id", cfg.AppID).
 		Str("env", cfg.Env).
-		Logger()
+		Logger().Hook(NoMsgHook{})
 	log.Logger = logger
 }
